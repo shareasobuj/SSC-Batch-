@@ -560,7 +560,8 @@
         function saveStudentsData(data) {
             localStorage.setItem("ssc08_reunion_students", JSON.stringify(data));
         }
-// ৩. ফর্ম সাবমিট
+
+   // ৩. ফর্ম সাবমিট
         document.getElementById("reunionForm").addEventListener("submit", function(e) {
             e.preventDefault();
 
@@ -611,7 +612,7 @@
                 alert("অভিনন্দন " + name + "! আপনার তথ্য নিবন্ধিত হয়েছে।");
             });
         });
-                    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newStudent)
                 });
             } catch (err) {
