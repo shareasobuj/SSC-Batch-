@@ -560,8 +560,7 @@
         function saveStudentsData(data) {
             localStorage.setItem("ssc08_reunion_students", JSON.stringify(data));
         }
-
-        // ৩. ফর্ম সাবমিট
+// ৩. ফর্ম সাবমিট
         document.getElementById("reunionForm").addEventListener("submit", function(e) {
             e.preventDefault();
 
@@ -578,19 +577,40 @@
 
             const newStudent = { name, phone, date };
 
-            // ক. আগে লোকাল স্টোরেজে যুক্ত করে সাথে সাথে টেবিলে দেখাবে
-            const currentList = getStudentsData();
-            currentList.push(newStudent);
-            saveStudentsData(currentList);
-            
-            // খ. টেবিল সাথে সাথে আপডেট
-            renderStudentList();
+            // ক. ব্যাকগ্রাউন্ডে গুগল শিটে ডাটা পাঠানো (CORS ব্লক এড়াতে mode: 'no-cors')
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newStudent)
+            }).then(() => {
+                // খ. লোকাল স্টোরেজে যুক্ত করা
+                const currentList = getStudentsData();
+                currentList.push(newStudent);
+                saveStudentsData(currentList);
+                
+                // গ. টেবিল আপডেট ও ইনপুট ক্লিয়ার
+                renderStudentList();
+                document.getElementById("reunionForm").reset();
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> তথ্য সাবমিট করুন';
+                submitBtn.disabled = false;
 
-            // গ. ব্যাকগ্রাউন্ডে গুগল শিটে ডাটা পাঠানো (যাতে ওয়েবসাইট স্লো না হয়)
-            try {
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
+                alert("অভিনন্দন " + name + "! আপনার তথ্য সফলভাবে নিবন্ধিত হয়েছে।");
+            }).catch(err => {
+                // ব্যাকগ্রাউন্ডে ভুল হলেও লোকাল স্টোরেজে ডাটা সেভ করে ইউজারকে কনফার্মেশন দেওয়া
+                const currentList = getStudentsData();
+                currentList.push(newStudent);
+                saveStudentsData(currentList);
+                renderStudentList();
+                document.getElementById("reunionForm").reset();
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> তথ্য সাবমিট করুন';
+                submitBtn.disabled = false;
+
+                alert("অভিনন্দন " + name + "! আপনার তথ্য নিবন্ধিত হয়েছে।");
+            });
+        });
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newStudent)
                 });
