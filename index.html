@@ -526,139 +526,152 @@
     </footer>
 
     <!-- EXTERNAL JAVASCRIPT LINK -->
-    <script src="script.js">
+    <!-- JAVASCRIPT DIRECT CODE (FIXED) -->
+    <script>
         // গুগল শিটের ওয়েব অ্যাপ ইউআরএল
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwi1j49Ep0iOXLaKKlIoYGGDST9So2PxGxyUV8jtjWte-648WyZfH7PYvrwpJLIZ4R/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwi1j49Ep0iOXLaKKlIoYGGDST9So2PxGxyUV8jtjWte-648WyZfH7PYvrwpJLIZ4R/exec";
 
-// ১. টাইমার
-const eventDate = new Date("December 25, 2026 10:00:00").getTime();
-setInterval(() => {
-    const now = new Date().getTime();
-    const diff = eventDate - now;
+        // ১. কাউন্টডাউন টাইমার
+        const eventDate = new Date("December 25, 2026 10:00:00").getTime();
+        setInterval(() => {
+            const now = new Date().getTime();
+            const diff = eventDate - now;
 
-    if (diff > 0) {
-        document.getElementById("days").innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
-        document.getElementById("hours").innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        document.getElementById("minutes").innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        document.getElementById("seconds").innerText = Math.floor((diff % (1000 * 60)) / 1000);
-    }
-}, 1000);
+            if (diff > 0) {
+                document.getElementById("days").innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
+                document.getElementById("hours").innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                document.getElementById("minutes").innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById("seconds").innerText = Math.floor((diff % (1000 * 60)) / 1000);
+            }
+        }, 1000);
 
-// ২. লোকাল স্টোরেজ ডাটা প্রসেসিং
-document.addEventListener("DOMContentLoaded", renderStudentList);
+        // ২. ডাটা আনা ও দেখানো
+        document.addEventListener("DOMContentLoaded", renderStudentList);
 
-function getStudentsData() {
-    const data = localStorage.getItem("ssc08_reunion_students");
-    return data ? JSON.parse(data) : [];
-}
+        function getStudentsData() {
+            try {
+                const data = localStorage.getItem("ssc08_reunion_students");
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                return [];
+            }
+        }
 
-function saveStudentsData(data) {
-    localStorage.setItem("ssc08_reunion_students", JSON.stringify(data));
-}
+        function saveStudentsData(data) {
+            localStorage.setItem("ssc08_reunion_students", JSON.stringify(data));
+        }
 
-// ৩. ফর্ম সাবমিট হ্যান্ডলার
-document.getElementById("reunionForm").addEventListener("submit", function(e) {
-    e.preventDefault();
+        // ৩. ফর্ম সাবমিট
+        document.getElementById("reunionForm").addEventListener("submit", function(e) {
+            e.preventDefault();
 
-    const submitBtn = document.getElementById("submitBtn");
-    const name = document.getElementById("stdName").value.trim();
-    const phone = document.getElementById("stdPhone").value.trim();
-    const date = new Date().toLocaleDateString('bn-BD');
+            const submitBtn = document.getElementById("submitBtn");
+            const name = document.getElementById("stdName").value.trim();
+            const phone = document.getElementById("stdPhone").value.trim();
+            
+            if(!name || !phone) return;
 
-    submitBtn.innerText = "জমা হচ্ছে...";
-    submitBtn.disabled = true;
+            const date = new Date().toLocaleDateString('bn-BD');
 
-    const newStudent = { name, phone, date };
+            submitBtn.innerText = "জমা হচ্ছে...";
+            submitBtn.disabled = true;
 
-    // লোকাল স্টোরেজে সেভ
-    const currentList = getStudentsData();
-    currentList.push(newStudent);
-    saveStudentsData(currentList);
+            const newStudent = { name, phone, date };
 
-    // গুগল শিটে ডাটা পাঠানো
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStudent)
-    }).then(() => console.log('Successfully sent to Google Sheet'))
-      .catch(err => console.error('Sheet Sync Error:', err));
+            // ক. আগে লোকাল স্টোরেজে যুক্ত করে সাথে সাথে টেবিলে দেখাবে
+            const currentList = getStudentsData();
+            currentList.push(newStudent);
+            saveStudentsData(currentList);
+            
+            // খ. টেবিল সাথে সাথে আপডেট
+            renderStudentList();
 
-    setTimeout(() => {
-        this.reset();
-        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> তথ্য সাবমিট করুন';
-        submitBtn.disabled = false;
-        renderStudentList();
-        alert("অভিনন্দন " + name + "! আপনার তথ্য সফলভাবে জমা নেওয়া হয়েছে।");
-    }, 500);
-});
+            // গ. ব্যাকগ্রাউন্ডে গুগল শিটে ডাটা পাঠানো (যাতে ওয়েবসাইট স্লো না হয়)
+            try {
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newStudent)
+                });
+            } catch (err) {
+                console.log("Sheet error:", err);
+            }
 
-// ৪. তালিকায় ডাটা দেখানো
-function renderStudentList() {
-    const students = getStudentsData();
-    const tableBody = document.getElementById("studentTableBody");
-    const countDisplay = document.getElementById("studentCount");
+            // ঘ. ইনপুট ক্লিয়ার ও নোটিফিকেশন
+            setTimeout(() => {
+                this.reset();
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> তথ্য সাবমিট করুন';
+                submitBtn.disabled = false;
+                alert("অভিনন্দন " + name + "! আপনার তথ্য নিবন্ধিত হয়েছে।");
+            }, 300);
+        });
 
-    countDisplay.innerText = students.length;
-    tableBody.innerHTML = "";
+        // ৪. রেন্ডার লিস্ট
+        function renderStudentList() {
+            const students = getStudentsData();
+            const tableBody = document.getElementById("studentTableBody");
+            const countDisplay = document.getElementById("studentCount");
 
-    if (students.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:25px;">এখনো কেউ নাম সেভ করেনি। আপনিই প্রথম নাম জমা দিন!</td></tr>`;
-        return;
-    }
+            if(!tableBody) return;
 
-    students.forEach((std, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td><strong>${escapeHTML(std.name)}</strong></td>
-            <td>${escapeHTML(std.phone)}</td>
-            <td>${escapeHTML(std.date)}</td>
-            <td>
-                <button onclick="deleteStudent(${index})" class="btn-delete">
-                    <i class="fa-solid fa-trash"></i> ডিলিট
-                </button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
+            countDisplay.innerText = students.length;
+            tableBody.innerHTML = "";
 
-// ৫. ডিলিট ফাংশন
-function deleteStudent(index) {
-    const students = getStudentsData();
-    const confirmDelete = confirm(`আপনি কি নিশ্চিত যে "${students[index].name}"-এর নাম ডিলিট করতে চান?`);
-    
-    if (confirmDelete) {
-        students.splice(index, 1);
-        saveStudentsData(students);
-        renderStudentList();
-        alert("তথ্যটি তালিকা থেকে ডিলিট করা হয়েছে।");
-    }
-}
+            if (students.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:25px;">এখনো কেউ নাম জমা দেয়নি। আপনিই প্রথম জমা দিন!</td></tr>`;
+                return;
+            }
 
-function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-}
+            students.forEach((std, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${escapeHTML(std.name)}</strong></td>
+                    <td>${escapeHTML(std.phone)}</td>
+                    <td>${escapeHTML(std.date)}</td>
+                    <td>
+                        <button onclick="deleteStudent(${index})" class="btn-delete">
+                            <i class="fa-solid fa-trash"></i> ডিলিট
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
 
-// ৬. এক্সেল (CSV) ফাইল ডাউনলোড
-function downloadCSV() {
-    const students = getStudentsData();
-    if (students.length === 0) {
-        alert("ডাউনলোড করার জন্য কোনো তথ্য নেই!");
-        return;
-    }
+        // ৫. ডিলিট করা
+        function deleteStudent(index) {
+            const students = getStudentsData();
+            if (confirm(`আপনি কি "${students[index].name}"-এর নাম ডিলিট করতে চান?`)) {
+                students.splice(index, 1);
+                saveStudentsData(students);
+                renderStudentList();
+            }
+        }
 
-    let csvContent = "\uFEFFSL,Name,Phone,Date\n";
-    students.forEach((std, index) => {
-        csvContent += `${index + 1},"${std.name}","${std.phone}","${std.date}"\n`;
-    });
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "SSC_2008_Reunion_Students.csv";
-    link.click();
+        // ৬. এক্সেল (CSV) ডাউনলোড
+        function downloadCSV() {
+            const students = getStudentsData();
+            if (students.length === 0) {
+                alert("ডাউনলোড করার মতো কোনো ডাটা নেই!");
+                return;
+            }
+
+            let csvContent = "\uFEFFSL,Name,Phone,Date\n";
+            students.forEach((std, index) => {
+                csvContent += `${index + 1},"${std.name}","${std.phone}","${std.date}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "SSC_2008_Registered_Students.csv";
+            link.click();
         }
     </script>
 </body>
